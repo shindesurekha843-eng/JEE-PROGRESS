@@ -1,0 +1,871 @@
+// ================================
+// JEE PROGRESS TRACKER
+// ================================
+
+let data = JSON.parse(
+  localStorage.getItem("jeeProgress")
+) || {};
+
+let weeklyTarget =
+  Number(localStorage.getItem("jeeWeeklyTarget")) || 50;
+
+let currentWeekOffset = 0;
+
+let chart;
+
+
+// ================================
+// ELEMENTS
+// ================================
+
+const dateInput = document.getElementById("dateInput");
+const hoursInput = document.getElementById("hoursInput");
+const saveBtn = document.getElementById("saveBtn");
+
+const totalHours = document.getElementById("totalHours");
+const weekHours = document.getElementById("weekHours");
+const averageHours = document.getElementById("averageHours");
+const streak = document.getElementById("streak");
+
+const targetInput = document.getElementById("targetInput");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+const progressPercent = document.getElementById("progressPercent");
+
+const records = document.getElementById("records");
+
+const bestDay = document.getElementById("bestDay");
+const lowestDay = document.getElementById("lowestDay");
+const studyDays = document.getElementById("studyDays");
+const consistency = document.getElementById("consistency");
+
+const message = document.getElementById("message");
+
+
+// ================================
+// INITIAL SETUP
+// ================================
+
+const today = new Date();
+
+dateInput.value =
+  today.toISOString().split("T")[0];
+
+targetInput.value = weeklyTarget;
+
+
+// ================================
+// DATE FUNCTIONS
+// ================================
+
+function getDateObject(dateString) {
+  return new Date(dateString + "T00:00:00");
+}
+
+
+function formatDate(dateString) {
+
+  const date = getDateObject(dateString);
+
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+
+function getMonday(date) {
+
+  const d = new Date(date);
+
+  const day = d.getDay();
+
+  const difference =
+    day === 0 ? -6 : 1 - day;
+
+  d.setDate(d.getDate() + difference);
+
+  d.setHours(0, 0, 0, 0);
+
+  return d;
+}
+
+
+function getWeekDates(offset = 0) {
+
+  const monday =
+    getMonday(new Date());
+
+  monday.setDate(
+    monday.getDate() + offset * 7
+  );
+
+  const dates = [];
+
+  for (let i = 0; i < 7; i++) {
+
+    const date = new Date(monday);
+
+    date.setDate(
+      monday.getDate() + i
+    );
+
+    dates.push(
+      date.toISOString().split("T")[0]
+    );
+
+  }
+
+  return dates;
+}
+
+
+// ================================
+// SAVE DATA
+// ================================
+
+function saveData() {
+
+  localStorage.setItem(
+    "jeeProgress",
+    JSON.stringify(data)
+  );
+
+}
+
+
+// ================================
+// SAVE STUDY HOURS
+// ================================
+
+saveBtn.addEventListener("click", () => {
+
+  const date = dateInput.value;
+
+  const hours = Number(hoursInput.value);
+
+  if (!date) {
+
+    message.textContent =
+      "Select a date first.";
+
+    return;
+  }
+
+  if (
+    isNaN(hours) ||
+    hours < 0 ||
+    hours > 24
+  ) {
+
+    message.textContent =
+      "Enter a valid number between 0 and 24.";
+
+    return;
+  }
+
+  data[date] = hours;
+
+  saveData();
+
+  message.textContent =
+    `Saved ${hours} hours for ${formatDate(date)}.`;
+
+  hoursInput.value = "";
+
+  updateDashboard();
+
+});
+
+
+// ================================
+// WEEKLY DATA
+// ================================
+
+function getWeeklyData() {
+
+  const dates =
+    getWeekDates(currentWeekOffset);
+
+  return dates.map(date => ({
+    date: date,
+    hours: Number(data[date]) || 0
+  }));
+
+}
+
+
+// ================================
+// TOTAL HOURS
+// ================================
+
+function calculateTotalHours() {
+
+  return Object.values(data)
+    .reduce(
+      (sum, value) =>
+        sum + Number(value),
+      0
+    );
+
+}
+
+
+// ================================
+// STREAK
+// ================================
+
+function calculateStreak() {
+
+  let current =
+    new Date();
+
+  current.setHours(0, 0, 0, 0);
+
+  let count = 0;
+
+  while (true) {
+
+    const date =
+      current.toISOString()
+        .split("T")[0];
+
+    if (
+      data[date] &&
+      Number(data[date]) > 0
+    ) {
+
+      count++;
+
+      current.setDate(
+        current.getDate() - 1
+      );
+
+    } else {
+
+      break;
+
+    }
+
+  }
+
+  return count;
+
+}
+
+
+// ================================
+// UPDATE DASHBOARD
+// ================================
+
+function updateDashboard() {
+
+  const weeklyData =
+    getWeeklyData();
+
+  const hours =
+    weeklyData.map(item => item.hours);
+
+  const weekTotal =
+    hours.reduce(
+      (a, b) => a + b,
+      0
+    );
+
+  const total =
+    calculateTotalHours();
+
+  const daysStudied =
+    hours.filter(h => h > 0).length;
+
+  const average =
+    weekTotal / 7;
+
+  totalHours.textContent =
+    total.toFixed(1);
+
+  weekHours.textContent =
+    weekTotal.toFixed(1);
+
+  averageHours.textContent =
+    average.toFixed(1);
+
+  streak.textContent =
+    calculateStreak() + " 🔥";
+
+  studyDays.textContent =
+    `${daysStudied} / 7`;
+
+  consistency.textContent =
+    Math.round(
+      (daysStudied / 7) * 100
+    ) + "%";
+
+  updateTarget(weekTotal);
+
+  updateAnalysis(weeklyData);
+
+  updateChart(weeklyData);
+
+  updateRecords();
+
+}
+
+
+// ================================
+// TARGET
+// ================================
+
+function updateTarget(weekTotal) {
+
+  const percentage =
+    Math.min(
+      (weekTotal / weeklyTarget) * 100,
+      100
+    );
+
+  progressBar.style.width =
+    percentage + "%";
+
+  progressText.textContent =
+    `${weekTotal.toFixed(1)} / ${weeklyTarget} hours`;
+
+  progressPercent.textContent =
+    Math.round(percentage) + "%";
+
+}
+
+
+// ================================
+// ANALYSIS
+// ================================
+
+function updateAnalysis(weeklyData) {
+
+  const studied =
+    weeklyData.filter(
+      item => item.hours > 0
+    );
+
+  if (studied.length === 0) {
+
+    bestDay.textContent = "-";
+    lowestDay.textContent = "-";
+
+    return;
+
+  }
+
+  const best =
+    [...studied]
+      .sort(
+        (a, b) => b.hours - a.hours
+      )[0];
+
+  const lowest =
+    [...studied]
+      .sort(
+        (a, b) => a.hours - b.hours
+      )[0];
+
+  bestDay.textContent =
+    `${formatDate(best.date)} • ${best.hours}h`;
+
+  lowestDay.textContent =
+    `${formatDate(lowest.date)} • ${lowest.hours}h`;
+
+}
+
+
+// ================================
+// CHART
+// ================================
+
+function updateChart(weeklyData) {
+
+  const ctx =
+    document
+      .getElementById("studyChart")
+      .getContext("2d");
+
+  const labels =
+    weeklyData.map(item => {
+
+      const date =
+        getDateObject(item.date);
+
+      return date.toLocaleDateString(
+        "en-IN",
+        {
+          weekday: "short"
+        }
+      );
+
+    });
+
+  const values =
+    weeklyData.map(
+      item => item.hours
+    );
+
+  if (chart) {
+
+    chart.destroy();
+
+  }
+
+  chart =
+    new Chart(ctx, {
+
+      type: "bar",
+
+      data: {
+
+        labels: labels,
+
+        datasets: [
+
+          {
+
+            label: "Study Hours",
+
+            data: values,
+
+            borderRadius: 8,
+
+            backgroundColor:
+              "#6c8cff",
+
+          }
+
+        ]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+          legend: {
+            display: false
+          }
+
+        },
+
+        scales: {
+
+          y: {
+
+            beginAtZero: true,
+
+            title: {
+
+              display: true,
+
+              text: "Hours"
+
+            }
+
+          },
+
+          x: {
+
+            title: {
+
+              display: true,
+
+              text: "Day"
+
+            }
+
+          }
+
+        }
+
+      }
+
+    });
+
+}
+
+
+// ================================
+// RECORDS
+// ================================
+
+function updateRecords() {
+
+  const dates =
+    Object.keys(data)
+      .sort()
+      .reverse();
+
+  if (dates.length === 0) {
+
+    records.innerHTML =
+      `<p>No study records yet.</p>`;
+
+    return;
+
+  }
+
+  records.innerHTML =
+    dates.map(date => `
+
+      <div class="record">
+
+        <div>
+
+          <div class="record-date">
+            ${formatDate(date)}
+          </div>
+
+        </div>
+
+        <div class="record-hours">
+          ${data[date]} hours
+        </div>
+
+        <button
+          class="delete-btn"
+          onclick="deleteRecord('${date}')"
+        >
+          Delete
+        </button>
+
+      </div>
+
+    `).join("");
+
+}
+
+
+// ================================
+// DELETE
+// ================================
+
+function deleteRecord(date) {
+
+  if (
+    !confirm(
+      `Delete study record for ${formatDate(date)}?`
+    )
+  ) {
+
+    return;
+
+  }
+
+  delete data[date];
+
+  saveData();
+
+  updateDashboard();
+
+}
+
+
+// ================================
+// WEEK NAVIGATION
+// ================================
+
+document
+  .getElementById("prevWeek")
+  .addEventListener(
+    "click",
+    () => {
+
+      currentWeekOffset--;
+
+      updateWeekLabel();
+
+      updateDashboard();
+
+    }
+  );
+
+
+document
+  .getElementById("nextWeek")
+  .addEventListener(
+    "click",
+    () => {
+
+      currentWeekOffset++;
+
+      updateWeekLabel();
+
+      updateDashboard();
+
+    }
+  );
+
+
+document
+  .getElementById("currentWeek")
+  .addEventListener(
+    "click",
+    () => {
+
+      currentWeekOffset = 0;
+
+      updateWeekLabel();
+
+      updateDashboard();
+
+    }
+  );
+
+
+// ================================
+// WEEK LABEL
+// ================================
+
+function updateWeekLabel() {
+
+  const dates =
+    getWeekDates(currentWeekOffset);
+
+  const first =
+    formatDate(dates[0]);
+
+  const last =
+    formatDate(dates[6]);
+
+  document.getElementById(
+    "weekLabel"
+  ).textContent =
+    `${first} – ${last}`;
+
+}
+
+
+// ================================
+// WEEKLY TARGET
+// ================================
+
+targetInput.addEventListener(
+  "change",
+  () => {
+
+    const value =
+      Number(targetInput.value);
+
+    if (
+      value > 0 &&
+      value <= 168
+    ) {
+
+      weeklyTarget = value;
+
+      localStorage.setItem(
+        "jeeWeeklyTarget",
+        weeklyTarget
+      );
+
+      updateDashboard();
+
+    }
+
+  }
+);
+
+
+// ================================
+// DARK / LIGHT MODE
+// ================================
+
+document
+  .getElementById("themeBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      document
+        .body
+        .classList
+        .toggle("light");
+
+      const isLight =
+        document.body.classList.contains(
+          "light"
+        );
+
+      localStorage.setItem(
+        "jeeTheme",
+        isLight
+          ? "light"
+          : "dark"
+      );
+
+      document.getElementById(
+        "themeBtn"
+      ).textContent =
+        isLight ? "🌙" : "☀️";
+
+    }
+  );
+
+
+// Load saved theme
+
+if (
+  localStorage.getItem("jeeTheme")
+  === "light"
+) {
+
+  document.body.classList.add(
+    "light"
+  );
+
+  document.getElementById(
+    "themeBtn"
+  ).textContent = "🌙";
+
+}
+
+
+// ================================
+// EXPORT
+// ================================
+
+function exportData() {
+
+  const backup = {
+
+    studyData: data,
+
+    weeklyTarget: weeklyTarget,
+
+    exportedAt:
+      new Date().toISOString()
+
+  };
+
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          backup,
+          null,
+          2
+        )
+      ],
+      {
+        type: "application/json"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+
+  a.download =
+    "jee-progress-backup.json";
+
+  a.click();
+
+  URL.revokeObjectURL(url);
+
+}
+
+
+document
+  .getElementById("exportBtn")
+  .addEventListener(
+    "click",
+    exportData
+  );
+
+document
+  .getElementById("exportBtn2")
+  .addEventListener(
+    "click",
+    exportData
+  );
+
+
+// ================================
+// IMPORT
+// ================================
+
+document
+  .getElementById("importInput")
+  .addEventListener(
+    "change",
+    event => {
+
+      const file =
+        event.target.files[0];
+
+      if (!file) return;
+
+      const reader =
+        new FileReader();
+
+      reader.onload =
+        e => {
+
+          try {
+
+            const backup =
+              JSON.parse(
+                e.target.result
+              );
+
+            data =
+              backup.studyData || {};
+
+            weeklyTarget =
+              Number(
+                backup.weeklyTarget
+              ) || 50;
+
+            localStorage.setItem(
+              "jeeWeeklyTarget",
+              weeklyTarget
+            );
+
+            targetInput.value =
+              weeklyTarget;
+
+            saveData();
+
+            updateDashboard();
+
+            alert(
+              "Backup imported successfully."
+            );
+
+          } catch {
+
+            alert(
+              "Invalid backup file."
+            );
+
+          }
+
+        };
+
+      reader.readAsText(file);
+
+    }
+  );
+
+
+// ================================
+// START
+// ================================
+
+updateWeekLabel();
+
+updateDashboard();
