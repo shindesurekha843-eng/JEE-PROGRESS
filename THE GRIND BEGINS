@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JEE Progress Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <header>
+      <div>
+        <h1>JEE Progress Tracker</h1>
+        <p>Track the work. Analyse the week. Improve the next one.</p>
+      </div>
+
+      <button id="themeBtn">☀️</button>
+    </header>
+
+    <!-- Stats -->
+    <section class="stats">
+
+      <div class="card">
+        <span>Total Hours</span>
+        <strong id="totalHours">0</strong>
+        <small>All recorded days</small>
+      </div>
+
+      <div class="card">
+        <span>This Week</span>
+        <strong id="weekHours">0</strong>
+        <small>Study hours</small>
+      </div>
+
+      <div class="card">
+        <span>Daily Average</span>
+        <strong id="averageHours">0</strong>
+        <small>This week</small>
+      </div>
+
+      <div class="card">
+        <span>Study Streak</span>
+        <strong id="streak">0 🔥</strong>
+        <small>Consecutive days</small>
+      </div>
+
+    </section>
+
+    <!-- Add study -->
+    <section class="panel">
+
+      <h2>📚 Log Today's Study</h2>
+
+      <div class="input-row">
+
+        <div>
+          <label>Date</label>
+          <input type="date" id="dateInput">
+        </div>
+
+        <div>
+          <label>Study Hours</label>
+          <input
+            type="number"
+            id="hoursInput"
+            min="0"
+            max="24"
+            step="0.5"
+            placeholder="e.g. 6.5"
+          >
+        </div>
+
+        <button id="saveBtn">Save Progress</button>
+
+      </div>
+
+      <p id="message"></p>
+
+    </section>
+
+    <!-- Weekly target -->
+    <section class="panel">
+
+      <div class="target-header">
+        <div>
+          <h2>🎯 Weekly Target</h2>
+          <p>Set your target and see how close you are.</p>
+        </div>
+
+        <input
+          type="number"
+          id="targetInput"
+          min="1"
+          max="168"
+          placeholder="Target hours"
+        >
+      </div>
+
+      <div class="progress-container">
+        <div id="progressBar"></div>
+      </div>
+
+      <div class="progress-text">
+        <span id="progressText">0 / 50 hours</span>
+        <span id="progressPercent">0%</span>
+      </div>
+
+    </section>
+
+    <!-- Chart -->
+    <section class="panel">
+
+      <div class="section-header">
+        <div>
+          <h2>📊 Weekly Analysis</h2>
+          <p id="weekLabel">Current Week</p>
+        </div>
+
+        <div class="week-buttons">
+          <button id="prevWeek">←</button>
+          <button id="currentWeek">Today</button>
+          <button id="nextWeek">→</button>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="studyChart"></canvas>
+      </div>
+
+    </section>
+
+    <!-- Analysis -->
+    <section class="analysis">
+
+      <div class="analysis-card">
+        <h3>📈 Best Day</h3>
+        <strong id="bestDay">-</strong>
+      </div>
+
+      <div class="analysis-card">
+        <h3>📉 Lowest Day</h3>
+        <strong id="lowestDay">-</strong>
+      </div>
+
+      <div class="analysis-card">
+        <h3>📚 Study Days</h3>
+        <strong id="studyDays">0 / 7</strong>
+      </div>
+
+      <div class="analysis-card">
+        <h3>🔥 Consistency</h3>
+        <strong id="consistency">0%</strong>
+      </div>
+
+    </section>
+
+    <!-- Records -->
+    <section class="panel">
+
+      <div class="section-header">
+        <div>
+          <h2>📅 Study Records</h2>
+          <p>Your recorded history</p>
+        </div>
+
+        <button id="exportBtn" class="secondary-btn">
+          Export Data
+        </button>
+      </div>
+
+      <div id="records"></div>
+
+    </section>
+
+    <!-- Backup -->
+    <section class="panel backup">
+
+      <h2>💾 Backup</h2>
+
+      <p>
+        Export your data before
